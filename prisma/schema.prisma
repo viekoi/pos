@@ -1,0 +1,161 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  STORE_OWNER
+  STORE_ADMIN
+  STORE_STAFF
+}
+
+model User {
+  id            String          @id @default(cuid())
+  name          String?
+  username      String?         @unique
+  email         String?         @unique
+  emailVerified DateTime?
+  image         String?
+  Session       Session[]
+  Account       Account?
+  // Optional for WebAuthn support
+  Authenticator Authenticator[]
+  UserToStore   UserToStore[]
+
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  Notification Notification[]
+  Media        Media[]
+}
+
+model Account {
+  id                       String  @id @default(cuid())
+  userId                   String  @unique
+  type                     String
+  provider                 String
+  providerAccountId        String
+  refresh_token            String? @db.Text
+  access_token             String? @db.Text
+  expires_at               Int?
+  token_type               String?
+  scope                    String?
+  id_token                 String? @db.Text
+  session_state            String?
+  refresh_token_expires_in Int?
+  user                     User?   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Optional for WebAuthn support
+model Authenticator {
+  id                   String  @id @default(cuid())
+  credentialID         String  @unique
+  userId               String
+  providerAccountId    String
+  credentialPublicKey  String
+  counter              Int
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Store {
+  id           String         @id @default(cuid())
+  name         String
+  storeLogo    String?        @db.Text
+  storeEmail   String         @db.Text
+  storePhone   String
+  whiteLabel   Boolean        @default(true)
+  address      String
+  city         String
+  zipCode      String
+  state        String
+  country      String
+  goal         Int            @default(5)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  users        UserToStore[]
+  Notification Notification[]
+  // SubAccount    SubAccount[]
+  // SidebarOption AgencySidebarOption[]
+  // Invitation    Invitation[]
+  // Notification  Notification[]
+  // Subscription  Subscription?
+  // AddOns        AddOns[]
+  Media        Media[]
+}
+
+model UserToStore {
+  id      String @id @default(cuid())
+  userId  String
+  storeId String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  role    Role   @default(STORE_STAFF)
+
+  @@unique([userId, storeId])
+}
+
+model Notification {
+  id           String  @id @default(uuid())
+  notification String
+  storeId      String
+  userId       String
+  link         String?
+  User         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Store        Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([storeId])
+  @@index([userId])
+}
+
+model Media {
+  id        String   @id @default(uuid())
+  type      String?
+  name      String
+  link      String   @unique
+  storeId   String?
+  userId    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  store     Store?   @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([storeId])
+}
