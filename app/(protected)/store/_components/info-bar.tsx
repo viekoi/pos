@@ -26,41 +26,41 @@ import { signOut } from "next-auth/react";
 type Props = {
   notifications: UserWithNotification;
   className?: string;
-  user:User 
+  user: User;
 };
 
-const InfoBar = ({ notifications, className,user}: Props) => {
+const InfoBar = ({ notifications, className, user }: Props) => {
   return (
     <>
       <div
         className={twMerge(
-          "fixed z-[20] md:left-[300px] left-0 right-0 top-0 p-4 bg-background/80 backdrop-blur-md flex  gap-4 items-center border-b-[1px] ",
+          "sticky w-full z-[20] top-0 p-4 bg-background/80 backdrop-blur-md flex  gap-4 items-center border-b-[1px] ",
           className
         )}
       >
         <div className="flex items-center gap-2 ml-auto">
-            <DropdownMenu>
-              <DropdownMenuTrigger>
-                <Avatar>
-                  <AvatarImage src={user.image ? user.image : ""} />
-                  <AvatarFallback>
-                    <User2 />
-                  </AvatarFallback>
-                </Avatar>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => signOut()}>
-                  Log out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger>
+              <Avatar>
+                <AvatarImage src={user.image ? user.image : ""} />
+                <AvatarFallback>
+                  <User2 />
+                </AvatarFallback>
+              </Avatar>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => signOut()}>
+                Log out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Sheet>
             <SheetTrigger>
               <div className="rounded-full w-9 h-9 bg-primary flex items-center justify-center text-white">
                 <Bell size={17} />
               </div>
             </SheetTrigger>
-            <SheetContent className="mt-4 mr-4 pr-4 overflow-auto custom-scrollbar">
+            <SheetContent  className="mt-4 mr-4 pr-4 overflow-auto custom-scrollbar">
               <SheetHeader className="text-left">
                 <SheetTitle>Notifications</SheetTitle>
               </SheetHeader>

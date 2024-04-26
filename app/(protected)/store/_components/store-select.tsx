@@ -67,7 +67,7 @@ const StoreSelect: React.FC<Props> = ({ stores }) => {
               <PopoverContent className="w-80  mt-4 z-[200] p-0">
                 <Command>
                   <CommandInput placeholder="Search store..." />
-                  <CommandEmpty>No framework found.</CommandEmpty>
+                  <CommandEmpty>No store found.</CommandEmpty>
                   <CommandList>
                     <CommandGroup>
                       {stores.map((s) => (

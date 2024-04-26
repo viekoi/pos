@@ -25,7 +25,7 @@ const Navigation = ({ user }: Props) => {
   return (
     <div className="fixed top-0 right-0 left-0 p-4 flex items-center justify-between z-10">
       <aside className="flex items-center gap-2">
-        <span className="text-xl font-bold bg-gradient-to-r from-primary to-secondary-foreground text-transparent bg-clip-text relative">
+        <span className="text-xl font-bold bg-gradient-to-r from-primary to-secondary-foreground text-transparent bg-clip-text ">
           {" "}
           Pos.
         </span>

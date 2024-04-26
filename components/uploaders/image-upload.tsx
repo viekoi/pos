@@ -1,6 +1,6 @@
 "use client";
 
-import { UploadDropzone } from "@/lib/uploadthing";
+import { UploadButton, UploadDropzone } from "@/lib/uploadthing";
 
 // here is the problem of sidebar bug remove it and move to global css
 // import "@uploadthing/react/styles.css";
@@ -12,6 +12,7 @@ interface ImageUploadProps {
 }
 import { X } from "lucide-react";
 import Image from "next/image";
+import { Button } from "../ui/button";
 
 export const ImageUpload: React.FC<ImageUploadProps> = ({
   endpoint,
@@ -22,35 +23,52 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
 
   if (value && fileType !== "pdf") {
     return (
-      <div className="relative ">
-        <Image
-          src={value}
-          alt="upload"
-          width={150}
-          height={200}
-          className=" rounded-[10px]"
-        />
+      <div className="w-full flex items-center justify-center">
+        <div className="relative ">
+          <Image
+            src={value}
+            alt="upload"
+            width={150}
+            height={200}
+            className=" rounded-[10px]"
+          />
 
-        <button
-          onClick={() => onChange("")}
-          type="button"
-          className="bg-rose-500 rounded-full p-1 text-white absolute top-0 right-0 shadow-sm"
-        >
-          <X className="h-4 w-4" />
-        </button>
+          <Button
+            onClick={() => onChange("")}
+            type="button"
+            variant={"destructive"}
+            size={"icon"}
+            className="absolute -top-4 -right-4 rounded-[50%]"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <UploadDropzone
-      endpoint={endpoint}
-      onClientUploadComplete={(res) => {
-        onChange(res?.[0].url);
-      }}
-      onUploadError={(error: Error) => {
-        console.log(error);
-      }}
-    />
+    <>
+      {/* <UploadDropzone
+        endpoint={endpoint}
+        onClientUploadComplete={(res) => {
+          onChange(res?.[0].url);
+        }}
+        onUploadError={(error: Error) => {
+          console.log(error);
+        }}
+      /> */}
+      <UploadButton
+        endpoint={endpoint}
+        onClientUploadComplete={(res) => {
+          // Do something with the response
+          console.log("Files: ", res);
+          onChange(res?.[0].url);
+        }}
+        onUploadError={(error: Error) => {
+          // Do something with the error.
+        }}
+      />
+    </>
   );
 };

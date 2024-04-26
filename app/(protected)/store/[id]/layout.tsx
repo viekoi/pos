@@ -1,4 +1,3 @@
-import BlurPage from "@/components/shared/blur-page";
 import React from "react";
 import InfoBar from "../_components/info-bar";
 
@@ -9,6 +8,9 @@ import {
   getUserStoreRole,
 } from "@/lib/queries";
 import { redirect } from "next/navigation";
+import Sidebar from "../_components/side-bar";
+import { db } from "@/lib/db";
+import SideBar from "../_components/side-bar";
 
 const StoreLayout = async ({
   children,
@@ -29,17 +31,26 @@ const StoreLayout = async ({
 
   if (!userStoreRole) redirect("/store");
 
+  const userWithStoreData = await db.userToStore.findMany({
+    where: {
+      userId: user.id,
+    },
+    include: {
+      Store: true,
+    },
+  });
+  
+  const stores = userWithStoreData.map((u) => u.Store);
+
   let allNoti: any = [];
   const notifications = await getNotificationAndUser(store.id);
   if (notifications) allNoti = notifications;
   return (
-    <div className="h-screen">
-      {/* <Sidebar id={params.agencyId} type="agency" /> */}
-      <div className="md:pl-[300px]">
+    <div className="relative flex w-full min-h-screen">
+      <SideBar stores={stores} store={store} user={user}/>
+      <div className="flex-[1_0_0] relative">
         <InfoBar notifications={allNoti} user={user} />
-        <div className="relative">
-          <BlurPage>{children}</BlurPage>
-        </div>
+        {children}
       </div>
     </div>
   );

@@ -10,7 +10,7 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth;
 
   const isApiAuthRoute = nextUrl.pathname.startsWith(apiAuthPrefix);
-  const isUploadthingPreflix = nextUrl.pathname.startsWith(apiAuthPrefix);
+  const isUploadthingPreflix = nextUrl.pathname.startsWith(uploadthingPreflix);
 
   if (isApiAuthRoute || isUploadthingPreflix) {
     return NextResponse.next();

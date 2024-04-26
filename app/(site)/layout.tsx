@@ -9,8 +9,6 @@ const layout = async ({ children }: { children: React.ReactNode }) => {
 
   const user = await getAuthUserDetail()
 
-  
-
   return (
     <main className="h-full">
       <Navigation user={user} />

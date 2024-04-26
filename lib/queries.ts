@@ -8,12 +8,17 @@ import { UTApi } from "uploadthing/server";
 
 const utapi = new UTApi();
 
+
+
+
 export const getAuthUserDetail = async () => {
   const session = await auth();
   const user = session?.user;
   if (!user) {
     return null;
   }
+
+  console.log(session)
 
   const userData = await db.user.findFirst({
     where: {
