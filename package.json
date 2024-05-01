@@ -39,6 +39,7 @@
     "@radix-ui/react-toggle": "^1.0.3",
     "@radix-ui/react-toggle-group": "^1.0.4",
     "@radix-ui/react-tooltip": "^1.0.7",
+    "@tanstack/react-table": "^8.16.0",
     "@tremor/react": "^3.16.1",
     "@uploadthing/react": "^6.4.4",
     "class-variance-authority": "^0.7.0",
@@ -51,6 +52,7 @@
     "next": "14.2.2",
     "next-auth": "^5.0.0-beta.16",
     "next-themes": "^0.3.0",
+    "nodemailer": "^6.9.13",
     "react": "^18",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18",
@@ -67,6 +69,7 @@
   "devDependencies": {
     "@prisma/client": "^5.12.1",
     "@types/node": "^20",
+    "@types/nodemailer": "^6.4.14",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/uuid": "^9.0.8",

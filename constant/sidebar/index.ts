@@ -76,12 +76,6 @@ export const options: {
       },
       {
         isCollapsible: false,
-        name: "Account",
-        link: "account",
-        icon: User,
-      },
-      {
-        isCollapsible: false,
         name: "Team",
         link: "team",
         icon: Users,

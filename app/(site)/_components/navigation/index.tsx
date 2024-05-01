@@ -48,7 +48,7 @@ const Navigation = ({ user }: Props) => {
           <DropdownMenu>
             <DropdownMenuTrigger>
               <Avatar>
-                <AvatarImage src={user.image || ""} />
+                <AvatarImage src={user.image} />
                 <AvatarFallback>
                   <User2 />
                 </AvatarFallback>

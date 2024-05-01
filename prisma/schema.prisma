@@ -13,23 +13,25 @@ enum Role {
   STORE_STAFF
 }
 
+enum TokenType {
+  TEAM_INVITE
+}
+
 model User {
-  id            String          @id @default(cuid())
-  name          String?
-  username      String?         @unique
-  email         String?         @unique
+  id            String        @id @default(cuid())
+  name          String
+  username      String?       @unique
+  email         String        @unique
   emailVerified DateTime?
-  image         String?
+  image         String
   Session       Session[]
   Account       Account?
-  // Optional for WebAuthn support
-  Authenticator Authenticator[]
-  UserToStore   UserToStore[]
+  stores        UserToStore[]
 
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  Notification Notification[]
-  Media        Media[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  medias Media[]
 }
 
 model Account {
@@ -69,79 +71,70 @@ model Session {
 }
 
 model VerificationToken {
-  identifier String
-  token      String
-  expires    DateTime
+  id      String    @id @default(cuid())
+  token   String
+  expires DateTime
+  email   String
+  type    TokenType
+  storeId String?
 
-  @@unique([identifier, token])
-}
-
-// Optional for WebAuthn support
-model Authenticator {
-  id                   String  @id @default(cuid())
-  credentialID         String  @unique
-  userId               String
-  providerAccountId    String
-  credentialPublicKey  String
-  counter              Int
-  credentialDeviceType String
-  credentialBackedUp   Boolean
-  transports           String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([type, email])
 }
 
 model Store {
-  id           String         @id @default(cuid())
-  name         String
-  storeLogo    String?        @db.Text
-  storeEmail   String         @db.Text
-  storePhone   String
-  whiteLabel   Boolean        @default(true)
-  address      String
-  city         String
-  zipCode      String
-  state        String
-  country      String
-  goal         Int            @default(5)
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  users        UserToStore[]
-  Notification Notification[]
+  id            String         @id @default(cuid())
+  name          String
+  storeLogo     String?        @db.Text
+  storeEmail    String         @db.Text
+  storePhone    String
+  whiteLabel    Boolean        @default(true)
+  address       String
+  city          String
+  zipCode       String
+  state         String
+  country       String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  users         UserToStore[]
+  notifications Notification[]
   // SubAccount    SubAccount[]
   // SidebarOption AgencySidebarOption[]
   // Invitation    Invitation[]
   // Notification  Notification[]
   // Subscription  Subscription?
   // AddOns        AddOns[]
-  Media        Media[]
+  medias        Media[]
 }
 
 model UserToStore {
-  id      String @id @default(cuid())
-  userId  String
-  storeId String
-  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  role    Role   @default(STORE_STAFF)
+  id           String         @id @default(cuid())
+  name         String
+  userId       String
+  storeId      String
+  phone        String?
+  image        String
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store        Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  role         Role           @default(STORE_STAFF)
+  Notification Notification[]
 
   @@unique([userId, storeId])
 }
 
 model Notification {
-  id           String  @id @default(uuid())
+  id           String      @id @default(uuid())
   notification String
   storeId      String
-  userId       String
+  staffId      String
   link         String?
-  User         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Store        Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  staff        UserToStore @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  store        Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([storeId])
-  @@index([userId])
+  @@index([staffId])
 }
 
 model Media {

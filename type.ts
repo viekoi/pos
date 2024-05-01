@@ -1,3 +1,4 @@
-import { Notification, User } from "@prisma/client";
+import { Notification, Role, User, UserToStore } from "@prisma/client";
 
-export type UserWithNotification = (Notification &{user:User})[]
+export type UserWithNotification = Notification & {staff:Staff};
+export type Staff = UserToStore & { user: {email: string } };

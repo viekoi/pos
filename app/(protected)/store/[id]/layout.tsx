@@ -5,12 +5,12 @@ import {
   getAuthUserDetail,
   getNotificationAndUser,
   getStoreById,
-  getUserStoreRole,
+  getStoreStaff
 } from "@/lib/queries";
 import { redirect } from "next/navigation";
-import Sidebar from "../_components/side-bar";
 import { db } from "@/lib/db";
 import SideBar from "../_components/side-bar";
+import AuthUserWithRoleProvider from "@/providers/auth-user-with-role-provider";
 
 const StoreLayout = async ({
   children,
@@ -27,7 +27,7 @@ const StoreLayout = async ({
 
   if (!store) redirect("/store");
 
-  const userStoreRole = await getUserStoreRole(user.id, store.id);
+  const userStoreRole = await getStoreStaff(user.id, store.id);
 
   if (!userStoreRole) redirect("/store");
 
@@ -36,23 +36,25 @@ const StoreLayout = async ({
       userId: user.id,
     },
     include: {
-      Store: true,
+      store: true,
     },
   });
-  
-  const stores = userWithStoreData.map((u) => u.Store);
+
+  const stores = userWithStoreData.map((u) => u.store);
 
   let allNoti: any = [];
   const notifications = await getNotificationAndUser(store.id);
   if (notifications) allNoti = notifications;
   return (
-    <div className="relative flex w-full min-h-screen">
-      <SideBar stores={stores} store={store} user={user}/>
-      <div className="flex-[1_0_0] relative">
-        <InfoBar notifications={allNoti} user={user} />
-        {children}
+    <AuthUserWithRoleProvider storeId={store.id}>
+      <div className="relative flex w-full min-h-screen">
+        <SideBar stores={stores} store={store} user={user} />
+        <div className="flex-[1_0_0] relative">
+          <InfoBar notifications={allNoti} user={user} />
+          {children}
+        </div>
       </div>
-    </div>
+    </AuthUserWithRoleProvider>
   );
 };
 

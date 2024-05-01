@@ -176,7 +176,7 @@ const SideBar: React.FC<Props> = ({ stores, user, store }) => {
                       ) : (
                         <CommandItem>
                           <Link
-                            href={`/${store.id}/${s.name.toLowerCase()}`}
+                            href={`/store/${store.id}/${s.name.toLowerCase()}`}
                             className={cn(
                               "flex gap-x-2  w-full items-end justify-center transition-all hover:translate-x-1 ",
                               shouldShown && "justify-start"
@@ -249,7 +249,7 @@ const CollapsibleList: React.FC<CollapsibleListProps> = ({
             return (
               <div key={i} className=" p-2 ">
                 <Link
-                  href={`/${store.id}/${option.name.toLowerCase()}`}
+                  href={`/store/${store.id}/${option.name.toLowerCase()}`}
                   className={cn(
                     "flex gap-x-2  w-full items-end justify-center transition-all hover:translate-x-1  ",
                     shouldShown && "justify-start"

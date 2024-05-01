@@ -24,7 +24,7 @@ import { User } from "@prisma/client";
 import { signOut } from "next-auth/react";
 
 type Props = {
-  notifications: UserWithNotification;
+  notifications: UserWithNotification[];
   className?: string;
   user: User;
 };
@@ -42,7 +42,7 @@ const InfoBar = ({ notifications, className, user }: Props) => {
           <DropdownMenu>
             <DropdownMenuTrigger>
               <Avatar>
-                <AvatarImage src={user.image ? user.image : ""} />
+                <AvatarImage src={user.image} />
                 <AvatarFallback>
                   <User2 />
                 </AvatarFallback>
@@ -60,19 +60,22 @@ const InfoBar = ({ notifications, className, user }: Props) => {
                 <Bell size={17} />
               </div>
             </SheetTrigger>
-            <SheetContent  className="mt-4 mr-4 pr-4 overflow-auto custom-scrollbar">
+            <SheetContent
+              side={"right"}
+              className="overflow-x-auto custom-scrollbar"
+            >
               <SheetHeader className="text-left">
                 <SheetTitle>Notifications</SheetTitle>
               </SheetHeader>
               {notifications?.map((notification) => (
                 <div
                   key={notification.id}
-                  className="flex flex-col gap-y-2 mb-2 overflow-x-scroll text-ellipsis"
+                  className="flex flex-col gap-y-2 mb-2 overflow-x-scroll custom-scrollbar text-ellipsis"
                 >
                   <div className="flex gap-2">
                     <Avatar>
                       <AvatarImage
-                        src={notification.user.image || ""}
+                        src={notification.staff.image}
                         alt="Profile Picture"
                       />
                       <AvatarFallback className="bg-primary">
@@ -82,23 +85,20 @@ const InfoBar = ({ notifications, className, user }: Props) => {
                     <div className="flex flex-col">
                       <p>
                         <span className="font-bold">
-                          {notification.notification.split("|")[0]}
+                          {notification.staff.name}{" "}
+                          <small className="text-xs text-muted-foreground">
+                            {new Date(
+                              notification.createdAt
+                            ).toLocaleDateString()}
+                          </small>
                         </span>
-                        <span className="text-muted-foreground">
-                          {notification.notification.split("|")[1]}
-                        </span>
-                        <span className="font-bold">
-                          {notification.notification.split("|")[2]}
-                        </span>
+                        <div className="">{notification.notification}</div>
                       </p>
-                      <small className="text-xs text-muted-foreground">
-                        {new Date(notification.createdAt).toLocaleDateString()}
-                      </small>
                     </div>
                   </div>
                 </div>
               ))}
-              {notifications?.length === 0 && (
+              {notifications.length === 0 && (
                 <div
                   className="flex items-center justify-center text-muted-foreground"
                   mb-4

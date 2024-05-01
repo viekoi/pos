@@ -45,22 +45,28 @@ import { Store } from "@prisma/client";
 import { ImageUpload } from "../uploaders/image-upload";
 import Loading from "../loaders/loading";
 import {
+  deleteStore,
+  getAuthUserStoreStaff,
   insertStore,
   saveActivityLogsNotification,
   updateStore,
 } from "@/lib/queries";
 import { StoreDetailsSchema } from "@/schema";
 import { useModal } from "@/providers/modal-provider";
+import { Staff } from "@/type";
+import { useAuthUserWithRole } from "@/providers/auth-user-with-role-provider";
 
 type Props = {
-  data?: Partial<Store>;
+  data?: Store;
 };
 
 const StoreDetails = ({ data }: Props) => {
   const { toast } = useToast();
   const { setClose } = useModal();
   const router = useRouter();
-  const [deletingAgency, setDeletingAgency] = useState(false);
+  const [deletingStore, setDeletingStore] = useState(false);
+  const { authUserWithRole } = useAuthUserWithRole();
+  const canUserEdit = authUserWithRole?.role !== "STORE_STAFF";
 
   const form = useForm<z.infer<typeof StoreDetailsSchema>>({
     mode: "onChange",
@@ -77,24 +83,24 @@ const StoreDetails = ({ data }: Props) => {
       state: data?.state,
       country: data?.country,
       storeLogo: data?.storeLogo,
-      goal: data?.goal || 0,
     },
   });
   const isLoading = form.formState.isSubmitting;
+  const isDisabled = isLoading || !canUserEdit;
 
-  useEffect(() => {
-    if (data) {
-      form.reset(data);
-    }
-  }, [data]);
+
 
   const handleSubmit = async (values: z.infer<typeof StoreDetailsSchema>) => {
     try {
       if (data?.id) {
         const response = await updateStore(values);
         if (response) {
+          await saveActivityLogsNotification({
+            storeId: data.id,
+            description: "store information updated",
+          });
           toast({
-            title: "Store created",
+            title: "Store updated",
           });
           setClose();
           router.refresh();
@@ -118,26 +124,25 @@ const StoreDetails = ({ data }: Props) => {
       });
     }
   };
-  const handleDeleteAgency = async () => {
-    // if (!data?.id) return;
-    // setDeletingAgency(true);
-    // //WIP: discontinue the subscription
-    // try {
-    //   const response = await deleteAgency(data.id);
-    //   toast({
-    //     title: "Deleted Agency",
-    //     description: "Deleted your agency and all subaccounts",
-    //   });
-    //   router.refresh();
-    // } catch (error) {
-    //   console.log(error);
-    //   toast({
-    //     variant: "destructive",
-    //     title: "Oppse!",
-    //     description: "could not delete your agency ",
-    //   });
-    // }
-    // setDeletingAgency(false);
+  const handleDeleteStore = async () => {
+    if (!data?.id) return;
+    setDeletingStore(true);
+    try {
+      const response = await deleteStore(data.id);
+      toast({
+        title: "Deleted store",
+        description: "Deleted your store and all data",
+      });
+      router.refresh();
+    } catch (error) {
+      console.log(error);
+      toast({
+        variant: "destructive",
+        title: "Oops!",
+        description: "could not delete your stpre",
+      });
+    }
+    setDeletingStore(false);
   };
 
   return (
@@ -157,7 +162,7 @@ const StoreDetails = ({ data }: Props) => {
               className="space-y-4"
             >
               <FormField
-                disabled={isLoading}
+                disabled={isDisabled}
                 control={form.control}
                 name="storeLogo"
                 render={({ field }) => (
@@ -176,7 +181,7 @@ const StoreDetails = ({ data }: Props) => {
               />
               <div className="flex md:flex-row gap-4">
                 <FormField
-                  disabled={isLoading}
+                  disabled={isDisabled}
                   control={form.control}
                   name="name"
                   render={({ field }) => (
@@ -192,15 +197,14 @@ const StoreDetails = ({ data }: Props) => {
                 <FormField
                   control={form.control}
                   name="storeEmail"
+                  disabled={
+                    !!data?.id && authUserWithRole?.role !== "STORE_OWNER"
+                  }
                   render={({ field }) => (
                     <FormItem className="flex-1">
                       <FormLabel>Store Email</FormLabel>
                       <FormControl>
-                        <Input
-                          readOnly={!!data?.id}
-                          placeholder="Email"
-                          {...field}
-                        />
+                        <Input placeholder="Email" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -209,7 +213,7 @@ const StoreDetails = ({ data }: Props) => {
               </div>
               <div className="flex md:flex-row gap-4">
                 <FormField
-                  disabled={isLoading}
+                  disabled={isDisabled}
                   control={form.control}
                   name="storePhone"
                   render={({ field }) => (
@@ -225,7 +229,7 @@ const StoreDetails = ({ data }: Props) => {
               </div>
 
               <FormField
-                disabled={isLoading}
+                disabled={isDisabled}
                 control={form.control}
                 name="whiteLabel"
                 render={({ field }) => {
@@ -251,7 +255,7 @@ const StoreDetails = ({ data }: Props) => {
                 }}
               />
               <FormField
-                disabled={isLoading}
+                disabled={isDisabled}
                 control={form.control}
                 name="address"
                 render={({ field }) => (
@@ -266,7 +270,7 @@ const StoreDetails = ({ data }: Props) => {
               />
               <div className="flex md:flex-row gap-4">
                 <FormField
-                  disabled={isLoading}
+                  disabled={isDisabled}
                   control={form.control}
                   name="city"
                   render={({ field }) => (
@@ -280,7 +284,7 @@ const StoreDetails = ({ data }: Props) => {
                   )}
                 />
                 <FormField
-                  disabled={isLoading}
+                  disabled={isDisabled}
                   control={form.control}
                   name="state"
                   render={({ field }) => (
@@ -294,7 +298,7 @@ const StoreDetails = ({ data }: Props) => {
                   )}
                 />
                 <FormField
-                  disabled={isLoading}
+                  disabled={isDisabled}
                   control={form.control}
                   name="zipCode"
                   render={({ field }) => (
@@ -309,7 +313,7 @@ const StoreDetails = ({ data }: Props) => {
                 />
               </div>
               <FormField
-                disabled={isLoading}
+                disabled={isDisabled}
                 control={form.control}
                 name="country"
                 render={({ field }) => (
@@ -322,37 +326,13 @@ const StoreDetails = ({ data }: Props) => {
                   </FormItem>
                 )}
               />
-            {/* "  {data?.id && (
-                <div className="flex flex-col gap-2">
-                  <FormLabel>Create A Goal</FormLabel>
-                  <FormDescription>
-                    ✨ Create a goal for your store. As your business grows your
-                    goals grow too so dont forget to set the bar higher!
-                  </FormDescription>
-                  <NumberInput
-                    defaultValue={data?.goal}
-                    onValueChange={async (val) => {
-                      if (!data?.id) return;
-                      await updateStoreDetails(data.id, { goal: val });
-                      await saveActivityLogsNotification({
-                        storeId: data.id,
-                        description: `Updated the store goal to | ${val} Sub Account`,
-                      });
-                      router.refresh();
-                    }}
-                    min={1}
-                    className="bg-background !border !border-input"
-                    placeholder="Sub Account Goal"
-                  />
-                </div>
-              )}" */}
-              <Button type="submit" disabled={isLoading}>
+              <Button type="submit" disabled={isDisabled}>
                 {isLoading ? <Loading /> : "Save store Information"}
               </Button>
             </form>
           </Form>
 
-          {data?.id && (
+          {data?.id && authUserWithRole?.role === "STORE_OWNER" && (
             <div className="flex flex-row items-center justify-between rounded-lg border border-destructive gap-4 p-4 mt-4">
               <div>
                 <div>Danger Zone</div>
@@ -362,10 +342,10 @@ const StoreDetails = ({ data }: Props) => {
                 data related.
               </div>
               <AlertDialogTrigger
-                disabled={isLoading || deletingAgency}
+                disabled={isDisabled || deletingStore}
                 className="text-red-600 p-2 text-center mt-2 rounded-md hove:bg-red-600 hover:text-white whitespace-nowrap"
               >
-                {deletingAgency ? "Deleting..." : "Delete Store"}
+                {deletingStore ? "Deleting..." : "Delete Store"}
               </AlertDialogTrigger>
             </div>
           )}
@@ -381,9 +361,9 @@ const StoreDetails = ({ data }: Props) => {
             <AlertDialogFooter className="flex items-center">
               <AlertDialogCancel className="mb-2">Cancel</AlertDialogCancel>
               <AlertDialogAction
-                disabled={deletingAgency}
+                disabled={deletingStore}
                 className="bg-destructive hover:bg-destructive"
-                onClick={handleDeleteAgency}
+                onClick={handleDeleteStore}
               >
                 Delete
               </AlertDialogAction>
