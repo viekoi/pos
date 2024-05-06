@@ -40,7 +40,7 @@ const Navigation = ({ user }: Props) => {
       </nav>
       <aside className="flex gap-2 items-center">
         {user ? (
-          <Button onClick={() => router.push("/store")}>Dashboard</Button>
+          <Button onClick={() => router.push("/setup")}>Dashboard</Button>
         ) : (
           <Button onClick={() => signIn("google")}>Login</Button>
         )}

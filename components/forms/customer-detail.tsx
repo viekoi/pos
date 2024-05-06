@@ -40,59 +40,53 @@ import * as z from "zod";
 import { Input } from "../ui/input";
 
 import { Button } from "../ui/button";
-import { Store } from "@prisma/client";
-import { ImageUpload } from "../uploaders/image-upload";
+import { Customer } from "@prisma/client";
 import Loading from "../loaders/loading";
 
-import { StoreDetailsSchema } from "@/schema";
+import { useModal } from "@/providers/modal-provider";
 
-import { deleteStore, upsertStore } from "@/lib/queries";
+import { upsertCustomer } from "@/lib/queries";
+import { CustomerDetailSchema } from "@/schema";
 
 type Props = {
-  data?: Store;
+  data?: Customer;
 };
 
-const StoreDetails = ({ data }: Props) => {
+const CustomerDetail = ({ data }: Props) => {
   const { toast } = useToast();
   const router = useRouter();
   const [deletingStore, setDeletingStore] = useState(false);
+  const { setClose } = useModal();
 
-  const form = useForm<z.infer<typeof StoreDetailsSchema>>({
+  const form = useForm<z.infer<typeof CustomerDetailSchema>>({
     mode: "onChange",
-    resolver: zodResolver(StoreDetailsSchema),
+    resolver: zodResolver(CustomerDetailSchema),
     defaultValues: {
       name: data?.name || "",
-      storeEmail: data?.storeEmail || "",
-      storePhone: data?.storePhone || "",
+      email: data?.email || "",
+      phone: data?.phone || "",
       address: data?.address || "",
       city: data?.city || "",
-      zipCode: data?.zipCode || "",
-      state: data?.state || "",
-      country: data?.country || "",
-      storeLogo: data?.storeLogo || null,
+      country: data?.country || "Viet Nam",
     },
   });
   const isLoading = form.formState.isSubmitting;
 
-  const handleSubmit = async (values: z.infer<typeof StoreDetailsSchema>) => {
+  const handleSubmit = async (values: z.infer<typeof CustomerDetailSchema>) => {
     try {
-      await upsertStore(values, data?.id).then((res) => {
-        if (res && !data?.id) {
-          toast({
-            title: "Store created",
-          });
-          router.push(`/dashboard`);
-        } else if (res && data?.id) {
-          toast({
-            title: "Store updated",
-          });
-        } else {
-          toast({
-            variant: "destructive",
-            title: "Something went wrong!!!",
-          });
-        }
-      });
+      const customer = await upsertCustomer(values, data?.id);
+      if (customer) {
+        toast({
+          title: "Customer created",
+        });
+        router.refresh();
+        setClose();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Something went wrong!!!",
+        });
+      }
     } catch (error) {
       console.log(error);
       toast({
@@ -102,62 +96,17 @@ const StoreDetails = ({ data }: Props) => {
       });
     }
   };
-  const handleDeleteStore = async () => {
-    if (!data?.id) return;
-    setDeletingStore(true);
-    try {
-      const response = await deleteStore();
-      toast({
-        title: "Deleted store",
-        description: "Deleted your store and all data",
-      });
-      router.refresh();
-    } catch (error) {
-      console.log(error);
-      toast({
-        variant: "destructive",
-        title: "Oops!",
-        description: "could not delete your stpre",
-      });
-    }
-    router.push("/setup");
-    setDeletingStore(false);
-  };
+  const handleDelete = async () => {};
 
   return (
     <AlertDialog>
       <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Store Information</CardTitle>
-          <CardDescription>
-            Lets create an store for you business. You can edit store settings
-            later from the store settings tab.
-          </CardDescription>
-        </CardHeader>
         <CardContent>
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(handleSubmit)}
               className="space-y-4"
             >
-              <FormField
-                disabled={isLoading}
-                control={form.control}
-                name="storeLogo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Store Logo</FormLabel>
-                    <FormControl>
-                      <ImageUpload
-                        endpoint="imageUploader"
-                        onChange={field.onChange}
-                        value={field.value}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               <div className="flex md:flex-row gap-4">
                 <FormField
                   disabled={isLoading}
@@ -165,9 +114,9 @@ const StoreDetails = ({ data }: Props) => {
                   name="name"
                   render={({ field }) => (
                     <FormItem className="flex-1">
-                      <FormLabel>Store Name</FormLabel>
+                      <FormLabel>Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Your store name" {...field} />
+                        <Input placeholder="Customer name" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -176,10 +125,10 @@ const StoreDetails = ({ data }: Props) => {
                 <FormField
                   disabled={isLoading}
                   control={form.control}
-                  name="storeEmail"
+                  name="email"
                   render={({ field }) => (
                     <FormItem className="flex-1">
-                      <FormLabel>Store Email</FormLabel>
+                      <FormLabel>Email</FormLabel>
                       <FormControl>
                         <Input placeholder="Email" {...field} />
                       </FormControl>
@@ -192,10 +141,10 @@ const StoreDetails = ({ data }: Props) => {
                 <FormField
                   disabled={isLoading}
                   control={form.control}
-                  name="storePhone"
+                  name="phone"
                   render={({ field }) => (
                     <FormItem className="flex-1">
-                      <FormLabel>Store Phone Number</FormLabel>
+                      <FormLabel>Phone</FormLabel>
                       <FormControl>
                         <Input placeholder="Phone" {...field} />
                       </FormControl>
@@ -229,34 +178,6 @@ const StoreDetails = ({ data }: Props) => {
                       <FormLabel>City</FormLabel>
                       <FormControl>
                         <Input placeholder="City" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  disabled={isLoading}
-                  control={form.control}
-                  name="state"
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel>State</FormLabel>
-                      <FormControl>
-                        <Input placeholder="State" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  disabled={isLoading}
-                  control={form.control}
-                  name="zipCode"
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel>Zipcpde</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Zipcode" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -314,7 +235,7 @@ const StoreDetails = ({ data }: Props) => {
               <AlertDialogAction
                 disabled={deletingStore}
                 className="bg-destructive hover:bg-destructive"
-                onClick={handleDeleteStore}
+                onClick={handleDelete}
               >
                 Delete
               </AlertDialogAction>
@@ -326,4 +247,4 @@ const StoreDetails = ({ data }: Props) => {
   );
 };
 
-export default StoreDetails;
+export default CustomerDetail;

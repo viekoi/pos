@@ -3,6 +3,7 @@ import {
   Database,
   DiffIcon,
   Flag,
+  Grid3X3,
   LayoutDashboard,
   LucideIcon,
   ScrollText,
@@ -58,6 +59,11 @@ export const options: {
             icon: ShoppingBasket,
           },
           {
+            name: "Categories",
+            link: "categories",
+            icon: Grid3X3,
+          },
+          {
             name: "Accessories",
             link: "accessories",
             icon: DiffIcon,
@@ -76,14 +82,8 @@ export const options: {
       },
       {
         isCollapsible: false,
-        name: "Team",
-        link: "team",
-        icon: Users,
-      },
-      {
-        isCollapsible: false,
-        name: "Contacts",
-        link: "contacts",
+        name: "Customers",
+        link: "customers",
         icon: Contact,
       },
       {

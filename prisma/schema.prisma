@@ -18,20 +18,23 @@ enum TokenType {
 }
 
 model User {
-  id            String        @id @default(cuid())
+  id            String         @id @default(cuid())
   name          String
-  username      String?       @unique
-  email         String        @unique
+  username      String?        @unique
+  email         String         @unique
   emailVerified DateTime?
   image         String
   Session       Session[]
   Account       Account?
-  stores        UserToStore[]
+  phone         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  storeId       String?        @unique
+  store         Store?
+  medias        Media[]
+  notifications Notification[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  medias Media[]
+  @@index([storeId])
 }
 
 model Account {
@@ -70,24 +73,12 @@ model Session {
   @@index([userId])
 }
 
-model VerificationToken {
-  id      String    @id @default(cuid())
-  token   String
-  expires DateTime
-  email   String
-  type    TokenType
-  storeId String?
-
-  @@unique([type, email])
-}
-
 model Store {
   id            String         @id @default(cuid())
   name          String
   storeLogo     String?        @db.Text
   storeEmail    String         @db.Text
   storePhone    String
-  whiteLabel    Boolean        @default(true)
   address       String
   city          String
   zipCode       String
@@ -95,60 +86,120 @@ model Store {
   country       String
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
-  users         UserToStore[]
+  userId        String         @unique
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   notifications Notification[]
-  // SubAccount    SubAccount[]
-  // SidebarOption AgencySidebarOption[]
-  // Invitation    Invitation[]
-  // Notification  Notification[]
-  // Subscription  Subscription?
-  // AddOns        AddOns[]
   medias        Media[]
-}
+  customer      Customer[]
+  categories    Category[]
+  brands        Brand[]
+  products      Product[]
 
-model UserToStore {
-  id           String         @id @default(cuid())
-  name         String
-  userId       String
-  storeId      String
-  phone        String?
-  image        String
-  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  store        Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  role         Role           @default(STORE_STAFF)
-  Notification Notification[]
-
-  @@unique([userId, storeId])
+  @@index([userId])
 }
 
 model Notification {
-  id           String      @id @default(uuid())
+  id           String @id @default(uuid())
   notification String
   storeId      String
-  staffId      String
-  link         String?
-  staff        UserToStore @relation(fields: [staffId], references: [id], onDelete: Cascade)
-  store        Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  userId       String
+
+  link  String?
+  user  User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([storeId])
-  @@index([staffId])
+  @@index([userId])
 }
 
 model Media {
+  id         String    @id @default(uuid())
+  type       String?
+  name       String
+  imageUrl   String    @unique
+  storeId    String?
+  userId     String
+  key        String    @unique
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  store      Store?    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId String?
+  category   Category?
+  brandId    String?
+  brand      Brand?
+  productId  String?
+  product    Product?
+
+  @@index([productId])
+  @@index([userId])
+  @@index([storeId])
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String
+  description String
+  storeId     String
+  store       Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  products    Product[]
+  imageUrl    String?   @unique
+  media       Media?    @relation(fields: [imageUrl], references: [imageUrl], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([imageUrl])
+}
+
+model Brand {
+  id          String    @id @default(uuid())
+  name        String
+  description String
+  storeId     String
+  store       Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  products    Product[]
+  imageUrl    String?   @unique
+  media       Media?    @relation(fields: [imageUrl], references: [imageUrl], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([imageUrl])
+}
+
+model Product {
+  id            String     @id @default(uuid())
+  name          String
+  description   String
+  isDiscounting Boolean    @default(false)
+  basePrice     Int
+  discountPrice Int
+  categories    Category[]
+  brands        Brand[]
+  imageUrl      String?    @unique
+  media         Media?     @relation(fields: [imageUrl], references: [imageUrl], onDelete: SetNull)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  storeId       String    
+  store         Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([imageUrl])
+}
+
+model Customer {
   id        String   @id @default(uuid())
-  type      String?
   name      String
-  link      String   @unique
-  storeId   String?
-  userId    String?
+  phone     String?
+  email     String?
+  address   String?
+  city      String?
+  country   String?
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  store     Store?   @relation(fields: [storeId], references: [id], onDelete: SetNull)
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([userId])
   @@index([storeId])
 }

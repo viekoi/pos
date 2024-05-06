@@ -1,12 +1,9 @@
 import * as z from "zod";
-import { Staff } from "./type";
-import { Role } from "@prisma/client";
+
 export const StoreDetailsSchema = z.object({
-  id: z.string().optional(),
   name: z.string().min(2, { message: "store name must be atleast 2 chars." }),
   storeEmail: z.string().min(1),
   storePhone: z.string().min(1),
-  whiteLabel: z.boolean(),
   address: z.string().min(1),
   city: z.string().min(1),
   zipCode: z.string().min(1),
@@ -15,16 +12,65 @@ export const StoreDetailsSchema = z.object({
   storeLogo: z.string().min(1).nullable(),
 });
 
-export const StaffSchema = z.object({
-  id:z.string(),
-  name: z.string().min(1),
-  email: z.string().email(),
-  image: z.string(),
+export const CustomerDetailSchema = z.object({
+  name: z
+    .string()
+    .min(2, { message: "customer name must be atleast 2 chars." }),
+  email: z.string().optional(),
   phone: z.string().optional(),
-  role: z.enum(["STORE_OWNER", "STORE_ADMIN", "STORE_STAFF"]),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  country: z.string().optional(),
 });
 
-export const TeamInviteShcema = z.object({
-  email: z.string().email(),
-  role: z.enum(["STORE_STAFF", "STORE_ADMIN"]),
+export const MediaSchema = z.object({
+  imageUrl: z.string().min(1, { message: "Media File is required" }),
+  name: z.string().min(1, { message: "Name is required" }),
 });
+
+export const CategorySchema = z.object({
+  name: z.string().min(1, { message: "Name is required" }),
+  description: z.string(),
+  imageUrl: z.string().min(1).nullable(),
+});
+
+export const BrandShcema = z.object({
+  name: z.string().min(1, { message: "Name is required" }),
+  description: z.string(),
+  imageUrl: z.string().min(1).nullable(),
+});
+
+export const ProductSchema = z
+  .object({
+    name: z.string().min(1, { message: "Name is required" }),
+    description: z.string(),
+    isDiscounting: z.boolean(),
+    imageUrl: z.string().min(1).nullable(),
+    basePrice: z.number(),
+    discountPrice: z.number(),
+    categories: z.array(
+      z.object({
+        name: z.string(),
+        id: z.string(),
+      })
+    ),
+    brands: z.array(
+      z.object({
+        name: z.string(),
+        id: z.string(),
+      })
+    ),
+  })
+  .refine(
+    (data) => {
+      if (data.isDiscounting && data.discountPrice >= data.basePrice) {
+        return false;
+      } else {
+        return true;
+      }
+    },
+    {
+      path: ["discountPrice"],
+      message: `Discount price should be lower than base price`,
+    }
+  );

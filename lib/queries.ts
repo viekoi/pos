@@ -3,12 +3,18 @@
 import { auth } from "@/auth";
 import { db } from "./db";
 import * as z from "zod";
-import { StaffSchema, StoreDetailsSchema, TeamInviteShcema } from "@/schema";
+import {
+  CustomerDetailSchema,
+  StoreDetailsSchema,
+  MediaSchema,
+  CategorySchema,
+  BrandShcema,
+  ProductSchema,
+} from "@/schema";
 import { UTApi } from "uploadthing/server";
-import nodeMailer, { Transporter } from "nodemailer";
-import { TokenType } from "@prisma/client";
-import { generateToken } from "./token";
-import pageUrl from "./config";
+
+import { v4 } from "uuid";
+import { compareArraysOfObjects } from "./utils";
 
 const utapi = new UTApi();
 
@@ -16,7 +22,6 @@ export const getAuthUserDetail = async () => {
   try {
     const session = await auth();
     const user = session?.user;
-    console.log(user);
     if (!user) {
       return null;
     }
@@ -26,7 +31,6 @@ export const getAuthUserDetail = async () => {
         id: user.id,
       },
     });
-
     return userData;
   } catch (error) {
     console.log(error);
@@ -34,117 +38,39 @@ export const getAuthUserDetail = async () => {
   }
 };
 
-export const getStoreStaff = async (userId: string, storeId: string) => {
-  try {
-    const role = await db.userToStore.findFirst({
-      where: {
-        AND: [{ userId }, { storeId }],
-      },
-      include: {
-        user: {
-          select: {
-            email: true,
-          },
-        },
-      },
-    });
-    if (!role) return null;
-
-    return role;
-  } catch (error) {
-    console.log(error);
-    return null;
-  }
-};
-
-export const getStoreStaffs = async (storeId: string) => {
-  try {
-    const roles = await db.userToStore.findMany({
-      where: {
-        storeId,
-      },
-      include: {
-        user: {
-          select: {
-            email: true,
-          },
-        },
-      },
-    });
-    if (!roles) return [];
-
-    return roles;
-  } catch (error) {
-    console.log(error);
-    return [];
-  }
-};
-
-export const saveActivityLogsNotification = async ({
-  storeId,
-  description,
-  link,
-}: {
-  storeId?: string;
-  description: string;
-  link?: string;
-}) => {
-  if (!storeId) {
-    console.log("no storeId");
-    return null;
-  }
+export const getStore = async () => {
   try {
     const user = await getAuthUserDetail();
-
-    if (!user) {
-      console.log("un auth");
-      return null;
-    }
-
-    const staff = await getStoreStaff(user.id, storeId);
-
-    if (!staff) {
-      console.log("cant not find staff");
-      return null;
-    }
-
-    const newNoti = await db.notification.create({
-      data: {
-        notification: description,
-        staffId: staff.id,
-        storeId: storeId,
-        link: link,
+    if (!user) return null;
+    const store = await db.store.findFirst({
+      where: {
+        userId: user.id,
       },
     });
 
-    return newNoti;
+    return store;
   } catch (error) {
     console.log(error);
     return null;
   }
 };
 
-export const insertStore = async (
-  values: z.infer<typeof StoreDetailsSchema>
+export const upsertStore = async (
+  values: z.infer<typeof StoreDetailsSchema>,
+  storeId?: string
 ) => {
   try {
-    const user = await getAuthUserDetail();
-    if (!user) {
-      console.log("un auth");
-      return null;
-    }
-
     const validatedFields = StoreDetailsSchema.safeParse(values);
 
     if (!validatedFields.success) {
-      return { error: "Invalid fields!!!!" };
+      return null;
     }
+
     const {
       name,
       storeEmail,
       storeLogo,
       storePhone,
-      whiteLabel,
       address,
       country,
       city,
@@ -152,46 +78,71 @@ export const insertStore = async (
       zipCode,
     } = validatedFields.data;
 
+    const user = await getAuthUserDetail();
+    if (!user) {
+      console.log("un auth");
+      return null;
+    }
+
+    if (storeId) {
+      const currentStore = await getStore();
+      if (!currentStore) return null;
+
+      if (storeLogo) {
+        await db.media.update({
+          where: {
+            imageUrl: storeLogo,
+          },
+          data: {
+            storeId: currentStore.id,
+          },
+        });
+      }
+
+      const updatedStore = await db.store.update({
+        where: {
+          id: currentStore.id,
+        },
+        data: {
+          name,
+          storeEmail,
+          storeLogo,
+          storePhone,
+          address,
+          country,
+          city,
+          state,
+          zipCode,
+        },
+      });
+
+      return updatedStore;
+    }
+
     const newStore = await db.store.create({
       data: {
         name,
         storeEmail,
         storeLogo,
         storePhone,
-        whiteLabel,
         address,
         country,
         city,
         state,
         zipCode,
+        userId: user.id,
       },
     });
 
-    if (newStore) {
-      await db.userToStore.create({
+    if (newStore && storeLogo) {
+      await db.media.update({
+        where: {
+          imageUrl: storeLogo,
+        },
         data: {
-          name: user.name,
-          image: user.image,
-          userId: user.id,
           storeId: newStore.id,
-          role: "STORE_OWNER",
         },
       });
-
-      if (storeLogo) {
-        await db.media.update({
-          where: {
-            link: storeLogo,
-          },
-          data: {
-            storeId: newStore.id,
-            userId: user.id,
-          },
-        });
-      }
-      return newStore;
-    } else {
-      if (storeLogo) await utapi.deleteFiles([storeLogo]);
     }
 
     return newStore;
@@ -201,106 +152,12 @@ export const insertStore = async (
   }
 };
 
-export const updateStore = async (
-  values: z.infer<typeof StoreDetailsSchema>
-) => {
+export const deleteStore = async () => {
   try {
-    const user = await getAuthUserDetail();
-    if (!user) {
-      console.log("un auth");
-      return null;
-    }
-
-    const validatedFields = StoreDetailsSchema.safeParse(values);
-
-    if (!validatedFields.success) {
-      return { error: "Invalid fields!!!!" };
-    }
-    const {
-      id,
-      name,
-      storeEmail,
-      storeLogo,
-      storePhone,
-      whiteLabel,
-      address,
-      country,
-      city,
-      state,
-      zipCode,
-    } = validatedFields.data;
-
-    if (!id) {
-      return null;
-    }
-
-    const exsitingStore = await db.store.findFirst({
-      where: {
-        id: id,
-      },
-    });
-
-    if (!exsitingStore) {
-      console.log("no es");
-      return null;
-    }
-
-    const updatedStore = await db.store.update({
-      where: {
-        id: id,
-      },
-      data: {
-        name,
-        storeEmail,
-        storeLogo,
-        storePhone,
-        whiteLabel,
-        address,
-        country,
-        city,
-        state,
-        zipCode,
-      },
-    });
-
-    if (updatedStore) {
-      if (
-        exsitingStore.storeLogo &&
-        storeLogo &&
-        exsitingStore.storeLogo !== storeLogo
-      ) {
-        await db.media.update({
-          where: {
-            link: exsitingStore.storeLogo,
-          },
-          data: {
-            link: storeLogo,
-            userId: user.id,
-          },
-        });
-
-        await utapi.deleteFiles([exsitingStore.storeLogo]);
-      }
-      return updateStore;
-    } else {
-      if (storeLogo) await utapi.deleteFiles([storeLogo]);
-      return null;
-    }
-  } catch (error) {
-    console.log(error);
-    return null;
-  }
-};
-
-export const getStoreById = async (storeId: string) => {
-  try {
-    const store = await db.store.findFirst({
-      where: {
-        id: storeId,
-      },
-    });
-
-    return store;
+    const currentStore = await getStore();
+    if (!currentStore) return null;
+    const response = await db.store.delete({ where: { id: currentStore.id } });
+    return response;
   } catch (error) {
     console.log(error);
     return null;
@@ -312,15 +169,7 @@ export const getNotificationAndUser = async (storeId: string) => {
     const response = await db.notification.findMany({
       where: { storeId },
       include: {
-        staff: {
-          include: {
-            user: {
-              select: {
-                email: true,
-              },
-            },
-          },
-        },
+        user: true,
       },
       orderBy: {
         createdAt: "desc",
@@ -333,437 +182,413 @@ export const getNotificationAndUser = async (storeId: string) => {
   }
 };
 
-export const deleteStore = async (storeId: string) => {
-  const response = await db.store.delete({ where: { id: storeId } });
-  return response;
+export const upsertCustomer = async (
+  values: z.infer<typeof CustomerDetailSchema>,
+  customerId?: string
+) => {
+  try {
+    const validatedFields = CustomerDetailSchema.safeParse(values);
+
+    if (!validatedFields.success) {
+      return null;
+    }
+
+    const { address, city, country, name, email, phone } = validatedFields.data;
+
+    const store = await getStore();
+
+    if (!store) return null;
+
+    const customer = await db.customer.upsert({
+      where: {
+        id: customerId || v4(),
+      },
+      update: {
+        address,
+        city,
+        country,
+        name,
+        email,
+        phone,
+        storeId: store.id,
+      },
+      create: {
+        address,
+        city,
+        country,
+        name,
+        email,
+        phone,
+        storeId: store.id,
+      },
+    });
+
+    return customer;
+  } catch (error) {
+    console.log(error);
+    return null;
+  }
 };
 
-export const deleteUser = async (userId: string) => {
+export const upsertMedia = async (values: z.infer<typeof MediaSchema>) => {
+  try {
+    const validatedFields = MediaSchema.safeParse(values);
+
+    if (!validatedFields.success) {
+      return null;
+    }
+
+    const { imageUrl, name } = validatedFields.data;
+
+    const store = await getStore();
+
+    if (!store) return null;
+
+    const media = await db.media.update({
+      where: {
+        imageUrl,
+      },
+      data: {
+        name: name,
+        storeId: store.id,
+      },
+    });
+
+    console.log(media);
+    return media;
+  } catch (error) {
+    console.log(error);
+    return null;
+  }
+};
+
+export const saveActivityLogsNotification = async ({
+  description,
+  link,
+}: {
+  description: string;
+  link?: string;
+}) => {
   try {
     const user = await getAuthUserDetail();
     if (!user) return null;
+    const store = await getStore();
 
-    const deletedUser = await db.user.delete({ where: { id: userId } });
+    if (!store) return null;
 
-    return deletedUser;
-  } catch (error) {
-    console.log(error);
-    return null;
-  }
-};
-
-export const getAuthUserStoreStaff = async (storeId: string) => {
-  try {
-    const session = await auth();
-    if (!session?.user || !session.user.id) return null;
-
-    const user = await getStoreStaff(session.user.id, storeId);
-
-    return user;
-  } catch (error) {
-    console.log(error);
-    return null;
-  }
-};
-
-interface EmailOption {
-  email: string;
-  subject: string;
-  name: string;
-  confirmLink: string;
-}
-
-export const sendMail = async (options: EmailOption) => {
-  const transporter: Transporter = nodeMailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || "587"),
-    service: process.env.SMTP_SERVICE,
-    auth: {
-      user: process.env.SMTP_MAIL,
-      pass: process.env.SMTP_PASSWORD,
-    },
-  });
-
-  const { email, subject, name, confirmLink } = options;
-
-  const mailOptions = {
-    from: process.env.SMTP_MAIL,
-    to: email,
-    subject,
-    html: `<html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>POS JOIN TEAM</title>
-        <style type="text/css">
-            /* Base  */
-    
-            body {
-                margin: 0;
-                padding: 0;
-                min-width: 100%;
-                font-family: Arial, sans-serif;
-                font-size: 16px;
-                line-height: 1.5;
-                background-color: #FAFAFA;
-                color: #222222;
-            }
-            a{
-                color: #000;
-                text-decoration: none;
-            }
-            h1{
-                font-size: 24px;
-                font-weight: 700;
-                line-height: 1.25;
-                margin-top: 0;
-                margin-bottom: 15px;
-                text-align: center;
-            }
-            p{
-                margin-top: 0;
-                margin-bottom: 24px;
-            }
-            table td{
-                vertical-align: top;
-            }
-            /* Layout */
-            .email-wrapper  {
-                max-width: 600;
-                margin: 0 auto;
-            }
-            .email-header {
-                background-color: #0080f3;
-                padding: 24px;
-                color: #ffffff;
-            }
-            .email-body {
-                padding: 24px;
-                background-color: #ffffff;
-            }
-            .email-footer {
-                padding: 24px;
-                background-color: #f6f6f6;
-            }
-            /* Button  */
-    
-            .button {
-                display: inline-block;
-                background-color: #0070f3;
-                color: #ffffff;
-                font-size: 16px;
-                font-weight: 700;
-                text-align: center;
-                text-decoration: none;
-                padding: 12px 24px;
-                border-radius: 4px;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="email-wrapper">
-            <div class="email-header">
-                <h1>POS</h1>
-            </div>
-            <div class="email-body">
-                <p>Hello ${name}</p>
-                <h2>LOGGIN TO THE INVITED ACCOUNT BEFORE CLICKING THE INVITATION LINK</h2>
-                <p>To ${subject.toLowerCase()}, please use the following confirmation link</p>
-                <h2>${confirmLink}</h2>
-                <p>Please confirm this link within 1 hour</p>
-            </div>
-            <div class="email-footer">
-                <p>If you have any question, please dont hestiate to contact us at <a href="mailto:khoinguyenviet1807@gmail.com">support mail</a></p>
-            </div>
-        </div>
-    </body>
-    </html>`,
-  };
-
-  await transporter.sendMail(mailOptions);
-};
-
-export const getVerificationTokenByToken = async (
-  token: string,
-  type: TokenType
-) => {
-  try {
-    const verificationToken = await db.verificationToken.findFirst({
-      where: {
-        token: token,
-        type: type,
-      },
-    });
-    return verificationToken;
-  } catch {
-    return null;
-  }
-};
-
-export const getVerificationTokenByEmmail = async (
-  email: string,
-  type: TokenType
-) => {
-  try {
-    const verificationToken = await db.verificationToken.findFirst({
-      where: {
-        email: email,
-        type: type,
-      },
-    });
-    return verificationToken;
-  } catch {
-    return null;
-  }
-};
-
-export const sendTeamInvite = async (
-  values: z.infer<typeof TeamInviteShcema>,
-  storeId: string
-) => {
-  try {
-    const currentStaff = await getAuthUserStoreStaff(storeId);
-
-    if (!currentStaff || currentStaff.role === "STORE_STAFF") {
-      return {
-        message: "unauthorized",
-        data: null,
-        status: false,
-      };
-    }
-
-    const validatedFields = TeamInviteShcema.safeParse(values);
-    if (!validatedFields.success) {
-      return {
-        message: "invalid fields",
-        data: null,
-        status: false,
-      };
-    }
-
-    const { email, role } = validatedFields.data;
-
-    const user = await db.user.findFirst({
-      where: {
-        email: email,
-      },
-    });
-
-    if (!user) {
-      return {
-        message: "User does not exists",
-        data: null,
-        status: false,
-      };
-    }
-
-    const existingUserRole = await db.userToStore.findFirst({
-      where: {
-        storeId: storeId,
+    const newNoti = await db.notification.create({
+      data: {
+        notification: description,
+        storeId: store.id,
         userId: user.id,
+        link: link,
       },
     });
 
-    if (existingUserRole) {
-      return {
-        message: "User is already a member of this store",
-        data: null,
-        status: false,
-      };
+    return newNoti;
+  } catch (error) {
+    console.log(error);
+    return null;
+  }
+};
+
+export const deleteMedias = async (imageKeys: string[]) => {
+  try {
+    const store = await getStore();
+
+    if (!store) return null;
+    const deletedFiles = await utapi.deleteFiles(imageKeys);
+    if (deletedFiles.success) {
+      const medias = await db.media.deleteMany({
+        where: {
+          key: {
+            in: imageKeys,
+          },
+        },
+      });
+
+      return medias;
+    } else {
+      return null;
+    }
+  } catch (error) {
+    console.log(error);
+    return null;
+  }
+};
+
+export const upsertCategory = async (
+  values: z.infer<typeof CategorySchema>,
+  categoryId?: string
+) => {
+  try {
+    const validatedFields = CategorySchema.safeParse(values);
+
+    if (!validatedFields.success) {
+      return null;
     }
 
-    const existingToken = await getVerificationTokenByEmmail(
-      email,
-      "TEAM_INVITE"
-    );
+    const { imageUrl, name, description } = validatedFields.data;
+    const store = await getStore();
 
-    if (existingToken) {
-      await db.verificationToken.delete({
+    if (!store) return null;
+
+    if (imageUrl) {
+      await db.media.update({
         where: {
-          id: existingToken.id,
+          imageUrl: imageUrl,
+        },
+        data: {
+          storeId: store.id,
         },
       });
     }
 
-    const verificationToken = await generateToken(
-      email,
-      "TEAM_INVITE",
-      storeId
-    );
-
-    await sendMail({
-      email: email,
-      subject: "ACCEPT INVITATION",
-      name: email,
-      confirmLink: `${pageUrl}/new-verification?token=${verificationToken.token}&type=TEAM_INVITE`,
-    });
-
-    return {
-      data: null,
-      message: "An invitation has been send",
-      status: true,
-    };
-  } catch (error) {
-    console.log(error);
-    return {
-      data: null,
-      message: error,
-      status: false,
-    };
-  }
-};
-
-export const acceptTeamInvite = async (token: string) => {
-  try {
-    const user = await getAuthUserDetail();
-    if (!user) {
-      return {
-        data: null,
-        message: "unauthenticated",
-        status: false,
-      };
-    }
-
-    const existingToken = await getVerificationTokenByToken(
-      token,
-      "TEAM_INVITE"
-    );
-
-    if (!existingToken) {
-      return {
-        data: null,
-        message: "Token does not exist",
-        status: false,
-      };
-    }
-
-    const existingStaff = await getStoreStaff(user.id, existingToken.id);
-
-    if (existingStaff) {
-      return {
-        data: null,
-        message: "User is already a member of this store",
-        status: false,
-      };
-    }
-
-    if (!existingToken.storeId) {
-      return {
-        data: null,
-        message: "Invalid token",
-        status: false,
-      };
-    }
-
-    const hasExpired = new Date(existingToken.expires) < new Date();
-
-    if (hasExpired) {
-      return {
-        data: null,
-        message: "Token has expired!",
-        status: false,
-      };
-    }
-
-    if (user.email !== existingToken.email) {
-      return {
-        data: null,
-        message: "Invalid Invitation",
-        status: false,
-      };
-    }
-
-    await db.userToStore.create({
-      data: {
-        name: user.name,
-        image: user.image,
-        userId: user.id,
-        storeId: existingToken.storeId,
-      },
-    });
-
-    await db.verificationToken.delete({
+    const category = await db.category.upsert({
       where: {
-        id: existingToken.id,
+        id: categoryId || v4(),
+      },
+      update: {
+        imageUrl,
+        name,
+        description,
+      },
+      create: {
+        imageUrl,
+        name,
+        description,
+        storeId: store.id,
       },
     });
 
-    return {
-      data: null,
-      message: "Store Access Granted",
-      status: true,
-    };
+    return category;
   } catch (error) {
     console.log(error);
-    return {
-      data: null,
-      message: "Could not accept invataion!",
-      status: false,
-    };
+    return null;
   }
 };
 
-export const updateStaff = async (
-  values: z.infer<typeof StaffSchema>,
-  storeId: string
+export const deleteCategory = async (categoryId: string) => {
+  try {
+    const store = await getStore();
+
+    if (!store) return null;
+
+    const category = await db.category.delete({
+      where: {
+        id: categoryId,
+      },
+    });
+
+    return category;
+  } catch (error) {
+    console.log(error);
+    return null;
+  }
+};
+
+export const upsertBrand = async (
+  values: z.infer<typeof BrandShcema>,
+  brandId?: string
 ) => {
   try {
-    const validatedFields = StaffSchema.safeParse(values);
+    const validatedFields = BrandShcema.safeParse(values);
+
     if (!validatedFields.success) {
-      return {
-        message: "invalid fields",
-        data: null,
-        status: false,
-      };
-    }
-    const { id, name, image, role, phone } = validatedFields.data;
-    const currentStaff = await getAuthUserStoreStaff(storeId);
-    if (!currentStaff) {
-      return {
-        data: null,
-        message: "unauthorised",
-        status: false,
-      };
+      return null;
     }
 
-    if (currentStaff.role === "STORE_STAFF") {
-      return {
-        data: null,
-        message: "unauthorised",
-        status: false,
-      };
+    const { imageUrl, name, description } = validatedFields.data;
+    const store = await getStore();
+
+    if (!store) return null;
+
+    if (imageUrl) {
+      await db.media.update({
+        where: {
+          imageUrl: imageUrl,
+        },
+        data: {
+          storeId: store.id,
+        },
+      });
     }
 
-    const updatedStaff = await db.userToStore.update({
+    const brand = await db.brand.upsert({
       where: {
-        id: id,
+        id: brandId || v4(),
       },
-      data: {
+      update: {
+        imageUrl,
         name,
-        phone,
-        image,
-        role,
+        description,
+      },
+      create: {
+        imageUrl,
+        name,
+        description,
+        storeId: store.id,
       },
     });
 
-    if (updatedStaff) {
-      return {
-        data: updatedStaff,
-        message: "updated",
-        status: true,
-      };
-    }
-    return {
-      data: null,
-      message: "something went wrong",
-      status: false,
-    };
+    return brand;
   } catch (error) {
     console.log(error);
-    return {
-      data: null,
-      message: "something went wrong",
-      status: false,
-    };
+    return null;
+  }
+};
+
+export const deleteBrand = async (brandId: string) => {
+  try {
+    const store = await getStore();
+
+    if (!store) return null;
+
+    const brand = await db.brand.delete({
+      where: {
+        id: brandId,
+      },
+    });
+
+    return brand;
+  } catch (error) {
+    console.log(error);
+    return null;
+  }
+};
+
+export const upsertProduct = async (
+  values: z.infer<typeof ProductSchema>,
+  productId?: string
+) => {
+  try {
+    const validatedFields = ProductSchema.safeParse(values);
+
+    if (!validatedFields.success) {
+      return null;
+    }
+
+    const {
+      basePrice,
+      brands,
+      categories,
+      description,
+      discountPrice,
+      imageUrl,
+      isDiscounting,
+      name,
+    } = validatedFields.data;
+    const store = await getStore();
+    if (!store) return null;
+
+    if (imageUrl) {
+      await db.media.update({
+        where: {
+          imageUrl: imageUrl,
+        },
+        data: {
+          storeId: store.id,
+        },
+      });
+    }
+
+    if (!productId) {
+      const product = await db.product.create({
+        data: {
+          basePrice,
+          description,
+          discountPrice,
+          imageUrl,
+          isDiscounting,
+          name,
+          categories: {
+            connect: categories.map((c) => ({ id: c.id })),
+          },
+          brands: {
+            connect: brands.map((b) => ({ id: b.id })),
+          },
+          storeId: store.id,
+        },
+      });
+
+      return product;
+    } else {
+      const existingProduct = await db.product.findFirst({
+        where: {
+          id: productId,
+        },
+        include: {
+          brands: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          categories: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      });
+
+      if (!existingProduct) return null;
+
+      const { addedEntries: addedBrands, removedEntries: removedBrands } =
+        compareArraysOfObjects(existingProduct.brands, brands);
+
+      const {
+        addedEntries: addedCategories,
+        removedEntries: removedCategories,
+      } = compareArraysOfObjects(existingProduct.categories, categories);
+      console.log(existingProduct.categories);
+      console.log(categories);
+      console.log(removedCategories);
+      console.log(addedCategories);
+      const product = await db.product.update({
+        where: {
+          id: productId,
+        },
+        data: {
+          basePrice,
+          description,
+          discountPrice,
+          imageUrl,
+          isDiscounting,
+          name,
+          categories: {
+            connect: addedCategories.map((c) => ({ id: c.id })),
+            disconnect: removedCategories.map((c) => ({ id: c.id })),
+          },
+          brands: {
+            connect: addedBrands.map((b) => ({ id: b.id })),
+            disconnect: removedBrands.map((c) => ({ id: c.id })),
+          },
+        },
+      });
+      return product;
+    }
+  } catch (error) {
+    console.log(error);
+    return null;
+  }
+};
+
+export const deleteProduct = async (productId: string) => {
+  try {
+    const store = await getStore();
+    if (!store) return null;
+
+    const product = await db.product.delete({
+      where: {
+        id: productId,
+      },
+    });
+
+    return product;
+  } catch (error) {
+    console.log(error);
+    return null;
   }
 };

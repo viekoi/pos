@@ -57,7 +57,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
           onChange(res?.[0].url);
         }}
         onUploadError={(error: Error) => {
-          // Do something with the error.
+          alert(`ERROR! ${error.message}`);
         }}
       />
     </>

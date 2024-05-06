@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { getAuthUserDetail } from "@/lib/queries";
+import { getAuthUserDetail, getStore } from "@/lib/queries";
 import { createUploadthing, type FileRouter } from "uploadthing/next";
 import { UploadThingError } from "uploadthing/server";
 
@@ -16,7 +16,6 @@ export const ourFileRouter = {
       // If you throw, the user will not be able to upload
       if (!user) throw new UploadThingError("Unauthorized");
 
-      // Whatever is returned here is accessible in onUploadComplete as `metadata`
       return { userId: user.id };
     })
     // Set permissions and file types for this FileRoute
@@ -24,10 +23,11 @@ export const ourFileRouter = {
       // This code RUNS ON YOUR SERVER after upload
       await db.media.create({
         data: {
-          link: file.url,
+          imageUrl: file.url,
           type: file.type,
           name: file.name,
-          userId:metadata.userId
+          userId: metadata.userId,
+          key: file.key,
         },
       });
       console.log("Upload complete for userId:");
