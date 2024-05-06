@@ -19,8 +19,8 @@ import { compareArraysOfObjects } from "./utils";
 const utapi = new UTApi();
 
 export const getAuthUserDetail = async () => {
+  const session = await auth();
   try {
-    const session = await auth();
     const user = session?.user;
     if (!user) {
       return null;
@@ -39,8 +39,8 @@ export const getAuthUserDetail = async () => {
 };
 
 export const getStore = async () => {
+  const user = await getAuthUserDetail();
   try {
-    const user = await getAuthUserDetail();
     if (!user) return null;
     const store = await db.store.findFirst({
       where: {

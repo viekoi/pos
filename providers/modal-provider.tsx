@@ -1,6 +1,5 @@
 "use client";
 
-import { Staff } from "@/type";
 import { Store, User } from "@prisma/client";
 import { createContext, useContext, useEffect, useState } from "react";
 
@@ -10,7 +9,6 @@ interface ModalProviderProps {
 
 export type ModalData = {
   store?: Store | null;
-  staff?: Staff | null;
 };
 type ModalContextType = {
   data: ModalData;
