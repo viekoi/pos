@@ -90,11 +90,12 @@ model Store {
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   notifications Notification[]
   medias        Media[]
-  customer      Customer[]
+  customers      Customer[]
   categories    Category[]
   brands        Brand[]
   products      Product[]
-
+  orderItems    OrderItem[]
+  orders        Order[]
   @@index([userId])
 }
 
@@ -135,6 +136,8 @@ model Media {
   product    Product?
 
   @@index([productId])
+  @@index([brandId])
+  @@index([categoryId])
   @@index([userId])
   @@index([storeId])
 }
@@ -150,7 +153,7 @@ model Category {
   media       Media?    @relation(fields: [imageUrl], references: [imageUrl], onDelete: SetNull)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-
+  @@index([storeId])
   @@index([imageUrl])
 }
 
@@ -165,7 +168,7 @@ model Brand {
   media       Media?    @relation(fields: [imageUrl], references: [imageUrl], onDelete: SetNull)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-
+  @@index([storeId])
   @@index([imageUrl])
 }
 
@@ -184,8 +187,9 @@ model Product {
   updatedAt     DateTime   @updatedAt
   storeId       String    
   store         Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
-
+  orderItems   OrderItem[]
   @@index([imageUrl])
+  @@index([storeId])
 }
 
 model Customer {
@@ -200,6 +204,51 @@ model Customer {
   store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
+  orders    Order[]
   @@index([storeId])
+}
+
+model OrderItem{
+  id        String   @id @default(uuid())
+  productId String?
+  isDiscounting Boolean 
+  basePrice     Int
+  discountPrice Int
+  product   Product? @relation(fields: [productId],references: [id],onDelete: SetNull)
+  sellingPrice Int
+  note String
+  quantity   Int
+  orderId    String?
+  order       Order? @relation(fields: [orderId],references: [id],onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  storeId  String
+  store    Store @relation(fields: [storeId],references: [id],onDelete: Cascade)
+
+  @@index([productId])
+  @@index([orderId])
+  @@index([storeId])
+}
+
+model Order{
+  id        String   @id @default(uuid())
+  storeId  String
+  store    Store @relation(fields: [storeId],references: [id],onDelete: Cascade)
+  orderItems OrderItem[]
+  subTotalPrice Int
+  totalAmount   Int
+  note String
+  customerId    String?
+  customer      Customer? @relation(fields: [customerId],references: [id],onDelete: SetNull)
+  customerName  String
+  phone     String?
+  email     String?
+  address   String?
+  city      String?
+  country   String?
+  finalPrice    Int
+  shippingPrice Int @default(0)
+  discountPercent Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

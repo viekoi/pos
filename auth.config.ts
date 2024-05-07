@@ -9,6 +9,7 @@ export default {
       allowDangerousEmailAccountLinking: true,
     }),
   ],
+  trustHost: true,
   callbacks: {
     async session({ token, session }) {
       if (token.sub && session.user) {
