@@ -30,9 +30,6 @@ export const ourFileRouter = {
           key: file.key,
         },
       });
-      console.log("Upload complete for userId:");
-
-      console.log("file url", file.url);
     }),
 } satisfies FileRouter;
 

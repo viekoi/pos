@@ -45,7 +45,7 @@ import Loading from "../loaders/loading";
 
 import { useModal } from "@/providers/modal-provider";
 
-import { upsertCustomer } from "@/lib/queries";
+import { deleteCustomer, upsertCustomer } from "@/lib/queries";
 import { CustomerDetailSchema } from "@/schema";
 
 type Props = {
@@ -55,7 +55,7 @@ type Props = {
 const CustomerDetail = ({ data }: Props) => {
   const { toast } = useToast();
   const router = useRouter();
-  const [deletingStore, setDeletingStore] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { setClose } = useModal();
 
   const form = useForm<z.infer<typeof CustomerDetailSchema>>({
@@ -96,7 +96,34 @@ const CustomerDetail = ({ data }: Props) => {
       });
     }
   };
-  const handleDelete = async () => {};
+  const onDelete = async (id: string) => {
+    try {
+      setIsDeleting(true);
+      const res = await deleteCustomer(id);
+      console.log(res);
+      if (res) {
+        toast({
+          variant: "default",
+          description: "deleted",
+        });
+        router.refresh();
+        setClose();
+      } else {
+        toast({
+          variant: "destructive",
+          description: "Something went wrong!!!",
+        });
+      }
+      setIsDeleting(false);
+    } catch (error) {
+      console.log(error);
+      setIsDeleting(false);
+      toast({
+        variant: "destructive",
+        description: "Something went wrong!!!",
+      });
+    }
+  };
 
   return (
     <AlertDialog>
@@ -199,48 +226,47 @@ const CustomerDetail = ({ data }: Props) => {
                 )}
               />
               <Button type="submit" disabled={isLoading}>
-                {isLoading ? <Loading /> : "Save store Information"}
+                {isLoading ? <Loading /> : "Save customer information"}
               </Button>
             </form>
           </Form>
 
           {data?.id && (
-            <div className="flex flex-row items-center justify-between rounded-lg border border-destructive gap-4 p-4 mt-4">
-              <div>
-                <div>Danger Zone</div>
+            <>
+              <div className="flex flex-row items-center justify-between rounded-lg border border-destructive gap-4 p-4 mt-4">
+                <div>
+                  <div className="text-destructive">Danger Zone</div>
+                </div>
+
+                <AlertDialogTrigger
+                  disabled={isLoading || isDeleting}
+                  className="bg-destructive text-white p-2 text-center mt-2 rounded-md hove:bg-red-600  whitespace-nowrap"
+                >
+                  {isDeleting ? "Deleting..." : "Delete customer"}
+                </AlertDialogTrigger>
               </div>
-              <div className="text-muted-foreground">
-                Deleting your store cannot be undone. This will also delete all
-                data related.
-              </div>
-              <AlertDialogTrigger
-                disabled={isLoading || deletingStore}
-                className="text-red-600 p-2 text-center mt-2 rounded-md hove:bg-red-600 hover:text-white whitespace-nowrap"
-              >
-                {deletingStore ? "Deleting..." : "Delete Store"}
-              </AlertDialogTrigger>
-            </div>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-left">
+                    Are you absolutely sure?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="text-left">
+                    This action cannot be undone
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex items-center">
+                  <AlertDialogCancel className="mb-2">Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    disabled={isDeleting}
+                    className="bg-destructive hover:bg-destructive"
+                    onClick={() => onDelete(data.id)}
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </>
           )}
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle className="text-left">
-                Are you absolutely sure?
-              </AlertDialogTitle>
-              <AlertDialogDescription className="text-left">
-                This action cannot be undone
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="flex items-center">
-              <AlertDialogCancel className="mb-2">Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                disabled={deletingStore}
-                className="bg-destructive hover:bg-destructive"
-                onClick={handleDelete}
-              >
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
         </CardContent>
       </Card>
     </AlertDialog>

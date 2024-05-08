@@ -21,6 +21,9 @@ const page = async () => {
       brands: true,
       categories: true,
     },
+    orderBy: {
+      createdAt: "asc", // Sort by createdAt field in descending order
+    },
   });
 
   const brands = await db.brand.findMany({

@@ -41,7 +41,7 @@ const ProductCard = ({ product, categories, brands }: Props) => {
         )
       }
     >
-      <AspectRatio ratio={4 / 3}>
+      <AspectRatio ratio={1}>
         <Image
           src={product.imageUrl || "/images/placeholder.webp"}
           alt="preview image"
@@ -53,7 +53,6 @@ const ProductCard = ({ product, categories, brands }: Props) => {
       <CardHeader>
         <div className="flex flex-col gap-y-2">
           <CardTitle>{product.name}</CardTitle>
-          <CardDescription>{product.description}</CardDescription>
           <div className="flex items-center justify-between">
             <h1 className={cn("font-bold text-foreground",product.isDiscounting && "line-through")}>
               {formatPriceVND(product.basePrice)}

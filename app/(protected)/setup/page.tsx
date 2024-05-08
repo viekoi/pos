@@ -8,7 +8,7 @@ const page = async () => {
   if (!user) return;
 
   const store = await getStore();
-  console.log(store)
+
 
   if (store) {
     redirect(`/dashboard`);

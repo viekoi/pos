@@ -29,7 +29,7 @@ import {
 import { Input } from "../ui/input";
 
 import { Button } from "../ui/button";
-import { BrandShcema } from "@/schema";
+import { BrandSchema } from "@/schema";
 
 import { ImageUpload } from "../uploaders/image-upload";
 import {
@@ -50,8 +50,8 @@ const BrandDetail: React.FC<Props> = ({ data }) => {
   const { setClose } = useModal();
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
-  const form = useForm<z.infer<typeof BrandShcema>>({
-    resolver: zodResolver(BrandShcema),
+  const form = useForm<z.infer<typeof BrandSchema>>({
+    resolver: zodResolver(BrandSchema),
     mode: "onSubmit",
     defaultValues: {
       imageUrl: data ? data.imageUrl : null,
@@ -60,7 +60,7 @@ const BrandDetail: React.FC<Props> = ({ data }) => {
     },
   });
 
-  async function onSubmit(values: z.infer<typeof BrandShcema>) {
+  async function onSubmit(values: z.infer<typeof BrandSchema>) {
     try {
       const response = await upsertBrand(values, data?.id);
       if (response) {

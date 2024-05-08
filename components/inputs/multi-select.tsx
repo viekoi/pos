@@ -12,7 +12,7 @@ import { X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Command, CommandGroup, CommandItem } from "@/components/ui/command";
-import { CommandList, Command as CommandPrimitive } from "cmdk";
+import {  CommandList, Command as CommandPrimitive } from "cmdk";
 
 export type Option = {
   id: string;
@@ -30,7 +30,6 @@ export function MultiSelect({ options, defaultValues, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Option[]>(defaultValues);
   const [inputValue, setInputValue] = useState("");
-  console.log(selected);
   const handleUnselect = useCallback((option: Option) => {
     setSelected((prev) => prev.filter((s) => s.id !== option.id));
   }, []);
@@ -54,7 +53,7 @@ export function MultiSelect({ options, defaultValues, onChange }: Props) {
     }
   }, []);
 
-  const selectables = options.filter((option) => !_.some(selected, option));
+  const selectables = options.filter((option) => !selected.find((s)=>s.id===option.id));
 
   useEffect(() => {
     onChange(selected);

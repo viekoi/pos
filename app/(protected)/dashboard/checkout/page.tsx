@@ -1,11 +1,25 @@
-import React from 'react'
+import { db } from "@/lib/db";
+import { getAuthUserDetail, getStore } from "@/lib/queries";
+import { redirect } from "next/navigation";
+import CheckoutComponent from "./_components/checkout-component";
 
-const page = () => {
-  return (
-    <div>
-      
-    </div>
-  )
-}
+const page = async () => {
+  const user = await getAuthUserDetail();
+  if (!user) redirect("/");
 
-export default page
+  const store = await getStore();
+
+  if (!store) redirect("setup");
+
+  const orders = await db.order.findMany({
+    where: {
+      storeId: store.id,
+    },
+  });
+
+
+
+  return <CheckoutComponent data={orders} />;
+};
+
+export default page;

@@ -74,28 +74,30 @@ model Session {
 }
 
 model Store {
-  id            String         @id @default(cuid())
+  id            String          @id @default(cuid())
   name          String
-  storeLogo     String?        @db.Text
-  storeEmail    String         @db.Text
+  storeLogo     String?         @db.Text
+  storeEmail    String          @db.Text
   storePhone    String
   address       String
   city          String
   zipCode       String
   state         String
   country       String
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  userId        String         @unique
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  userId        String          @unique
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   notifications Notification[]
   medias        Media[]
-  customers      Customer[]
+  customers     Customer[]
   categories    Category[]
   brands        Brand[]
   products      Product[]
   orderItems    OrderItem[]
   orders        Order[]
+  orderCustomers OrderCustomer[]
+
   @@index([userId])
 }
 
@@ -153,6 +155,7 @@ model Category {
   media       Media?    @relation(fields: [imageUrl], references: [imageUrl], onDelete: SetNull)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
   @@index([storeId])
   @@index([imageUrl])
 }
@@ -168,87 +171,102 @@ model Brand {
   media       Media?    @relation(fields: [imageUrl], references: [imageUrl], onDelete: SetNull)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
   @@index([storeId])
   @@index([imageUrl])
 }
 
 model Product {
-  id            String     @id @default(uuid())
+  id            String      @id @default(uuid())
   name          String
   description   String
-  isDiscounting Boolean    @default(false)
+  isDiscounting Boolean     @default(false)
   basePrice     Int
   discountPrice Int
   categories    Category[]
   brands        Brand[]
-  imageUrl      String?    @unique
-  media         Media?     @relation(fields: [imageUrl], references: [imageUrl], onDelete: SetNull)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  storeId       String    
-  store         Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  orderItems   OrderItem[]
+  imageUrl      String?     @unique
+  media         Media?      @relation(fields: [imageUrl], references: [imageUrl], onDelete: SetNull)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  storeId       String
+  store         Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  orderItems    OrderItem[]
+
   @@index([imageUrl])
   @@index([storeId])
 }
 
 model Customer {
-  id        String   @id @default(uuid())
-  name      String
-  phone     String?
-  email     String?
-  address   String?
-  city      String?
-  country   String?
-  storeId   String
-  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  orders    Order[]
+  id             String          @id @default(uuid())
+  name           String
+  phone          String?
+  email          String?
+  address        String?
+  city           String?
+  country        String?
+  storeId        String
+  store          Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  orderCustomers OrderCustomer[]
+
   @@index([storeId])
 }
 
-model OrderItem{
-  id        String   @id @default(uuid())
-  productId String?
-  isDiscounting Boolean 
+model OrderItem {
+  id            String   @id @default(uuid())
+  name          String
+  productId     String
+  isDiscounting Boolean
   basePrice     Int
   discountPrice Int
-  product   Product? @relation(fields: [productId],references: [id],onDelete: SetNull)
-  sellingPrice Int
-  note String
-  quantity   Int
-  orderId    String?
-  order       Order? @relation(fields: [orderId],references: [id],onDelete: SetNull)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  storeId  String
-  store    Store @relation(fields: [storeId],references: [id],onDelete: Cascade)
+  product       Product? @relation(fields: [productId], references: [id], onDelete: NoAction)
+  sellingPrice  Int
+  note          String
+  quantity      Int
+  orderId       String?
+  order         Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  storeId       String
+  store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@index([productId])
   @@index([orderId])
   @@index([storeId])
 }
 
-model Order{
-  id        String   @id @default(uuid())
-  storeId  String
-  store    Store @relation(fields: [storeId],references: [id],onDelete: Cascade)
-  orderItems OrderItem[]
-  subTotalPrice Int
-  totalAmount   Int
-  note String
-  customerId    String?
-  customer      Customer? @relation(fields: [customerId],references: [id],onDelete: SetNull)
-  customerName  String
-  phone     String?
-  email     String?
-  address   String?
-  city      String?
-  country   String?
-  finalPrice    Int
-  shippingPrice Int @default(0)
-  discountPercent Int @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Order {
+  id              String         @id @default(uuid())
+  orderName       String
+  storeId         String
+  store           Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  orderItems      OrderItem[]
+  subTotalPrice   Int
+  totalAmount     Int
+  note            String
+  customer        OrderCustomer?
+  finalPrice      Int
+  shippingPrice   Int            @default(0)
+  discountPercent Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  orderCustomerId String?
+}
+
+model OrderCustomer {
+  id           String    @id @default(uuid())
+  customerId   String?
+  customer     Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  name String?
+  phone        String?
+  email        String?
+  address      String?
+  city         String?
+  country      String?
+  orderId      String    @unique
+  order        Order     @relation(fields: [orderId], references: [id], onDelete: NoAction)
+  storeId      String
+  store        Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
 }

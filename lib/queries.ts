@@ -8,7 +8,7 @@ import {
   StoreDetailsSchema,
   MediaSchema,
   CategorySchema,
-  BrandShcema,
+  BrandSchema,
   ProductSchema,
 } from "@/schema";
 import { UTApi } from "uploadthing/server";
@@ -388,11 +388,11 @@ export const deleteCategory = async (categoryId: string) => {
 };
 
 export const upsertBrand = async (
-  values: z.infer<typeof BrandShcema>,
+  values: z.infer<typeof BrandSchema>,
   brandId?: string
 ) => {
   try {
-    const validatedFields = BrandShcema.safeParse(values);
+    const validatedFields = BrandSchema.safeParse(values);
 
     if (!validatedFields.success) {
       return null;
@@ -542,10 +542,7 @@ export const upsertProduct = async (
         addedEntries: addedCategories,
         removedEntries: removedCategories,
       } = compareArraysOfObjects(existingProduct.categories, categories);
-      console.log(existingProduct.categories);
-      console.log(categories);
-      console.log(removedCategories);
-      console.log(addedCategories);
+
       const product = await db.product.update({
         where: {
           id: productId,
@@ -587,6 +584,25 @@ export const deleteProduct = async (productId: string) => {
     });
 
     return product;
+  } catch (error) {
+    console.log(error);
+    return null;
+  }
+};
+
+export const deleteCustomer = async (cusomterId: string) => {
+  try {
+    const store = await getStore();
+
+    if (!store) return null;
+
+    const customer = await db.customer.delete({
+      where: {
+        id: cusomterId,
+      },
+    });
+
+    return customer;
   } catch (error) {
     console.log(error);
     return null;

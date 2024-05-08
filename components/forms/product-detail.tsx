@@ -52,6 +52,7 @@ import {
   saveActivityLogsNotification,
   upsertProduct,
 } from "@/lib/queries";
+import { NumberInput } from "@tremor/react";
 
 interface Props {
   data?: ProductWithBrandsAndCategory;
@@ -209,12 +210,11 @@ const ProductDetail: React.FC<Props> = ({ data, brands, categories }) => {
                   <FormItem className="flex-1">
                     <FormLabel>Base price</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="base price"
+                      <NumberInput
+                        className="rounded-sm"
                         min={0}
                         {...field}
-                        onChange={(e) => field.onChange(+e.target.value)}
+                        enableStepper={false}
                       />
                     </FormControl>
                     <FormMessage />
@@ -257,12 +257,11 @@ const ProductDetail: React.FC<Props> = ({ data, brands, categories }) => {
                       <FormItem className="flex-1">
                         <FormLabel>Discount price</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            placeholder="discount price"
+                          <NumberInput
+                            className="rounded-sm"
                             min={0}
                             {...field}
-                            onChange={(e) => field.onChange(+e.target.value)}
+                            enableStepper={false}
                           />
                         </FormControl>
                         <FormMessage />
